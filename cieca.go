@@ -83,7 +83,7 @@ func (d *DataStore) SetWithExpiration(key string, value []byte, expiration time.
 	defer d.mutex.Unlock()
 	d.data[key] = el
 	if c != nil {
-		go d.queueDeletion(expiration, key)
+		go d.queueDeletion(expiration, c, key)
 	}
 }
 
@@ -97,12 +97,11 @@ func (d *DataStore) Clean() {
 	}
 }
 
-func (d *DataStore) queueDeletion(dur time.Duration, key string) {
-
+func (d *DataStore) queueDeletion(dur time.Duration, canc <-chan struct{}, key string) {
 	select {
 	case <-time.NewTimer(dur).C:
 		d.Delete(key)
-	case <-d.data[key].cancel:
+	case <-canc:
 		// useless, but explicits what we're doing
 		return
 	}
